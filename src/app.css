@@ -1,0 +1,50 @@
+/* 기존 앱(라이트 테마)의 색과 모양을 그대로 따름 */
+:root {
+  --blue: #1a73e8;
+  --blue-hover: #1765cc;
+  --blue-soft: #e8f0fe;
+  --red: #d93025;
+  --green: #188038;
+  --text: #3c4043;
+  --text-strong: #202124;
+  --muted: #5f6368;
+  --border: #dadce0;
+  --bg: #f8f9fa;
+  --card: #ffffff;
+  --gray-soft: #f1f3f4;
+  --radius: 8px;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); }
+body { overflow: hidden; }
+
+button {
+  font: inherit; font-weight: 600; border-radius: 6px; padding: 7px 16px; cursor: pointer;
+  border: 1px solid var(--blue); background: var(--blue); color: #fff;
+}
+button:hover:not(:disabled) { background: var(--blue-hover); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.secondary { background: var(--gray-soft); color: var(--text); border-color: var(--border); }
+button.secondary:hover:not(:disabled) { background: #e8eaed; }
+button.danger { background: var(--gray-soft); color: var(--red); border-color: var(--border); }
+button.danger:hover:not(:disabled) { background: #fce8e6; }
+button.ghost { background: transparent; border-color: transparent; color: var(--text); }
+button.ghost:hover:not(:disabled) { background: var(--gray-soft); }
+
+input, select {
+  font: inherit; color: var(--text-strong); background: #fff; border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 10px;
+}
+input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.card-title { font-size: 15px; font-weight: 700; color: var(--blue); margin: 0 0 10px; }
+.muted { color: var(--muted); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.over { color: var(--red); }
+.ok { color: var(--green); }

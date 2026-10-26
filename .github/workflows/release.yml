@@ -1,0 +1,113 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    name: Generate release notes
+    runs-on: ubuntu-latest
+    outputs:
+      body: ${{ steps.notes.outputs.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 이전 태그 이후 커밋 제목을 접두어별로 묶어 한국어 릴리즈 노트 작성
+      - name: Build release notes
+        id: notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_tag="${GITHUB_REF_NAME}"
+          previous_tag="$(git tag --sort=-creatordate | grep -vx "$current_tag" | head -n 1 || true)"
+          if [[ -n "$previous_tag" ]]; then range="$previous_tag..$current_tag"; else range="$current_tag"; fi
+
+          notes_dir="$(mktemp -d)"
+          git log --reverse --format='%s' "$range" | while IFS= read -r subject; do
+            case "$subject" in
+              feat:*|feat\(*\):*) echo "${subject#*: }" >> "$notes_dir/features" ;;
+              fix:*|fix\(*\):*|bug:*|bug\(*\):*) echo "${subject#*: }" >> "$notes_dir/bugs" ;;
+              style:*|style\(*\):*) echo "${subject#*: }" >> "$notes_dir/design" ;;
+              docs:*|docs\(*\):*) echo "${subject#*: }" >> "$notes_dir/docs" ;;
+              refactor:*|refactor\(*\):*) echo "${subject#*: }" >> "$notes_dir/refactor" ;;
+              *) echo "$subject" >> "$notes_dir/other" ;;
+            esac
+          done
+
+          append_section() {
+            if [[ -s "$2" ]]; then { echo "## $1"; sed 's/^/- /' "$2"; echo; } >> RELEASE_NOTES.md; fi
+          }
+          : > RELEASE_NOTES.md
+          append_section "🐛 버그 수정" "$notes_dir/bugs"
+          append_section "✨ 기능 추가" "$notes_dir/features"
+          append_section "🎨 디자인 수정" "$notes_dir/design"
+          append_section "📝 문서 수정" "$notes_dir/docs"
+          append_section "♻️ 리팩토링" "$notes_dir/refactor"
+          append_section "🔧 기타 변경" "$notes_dir/other"
+          [[ -s RELEASE_NOTES.md ]] || printf '## 🔧 기타 변경\n- 릴리즈 변경사항을 확인해 주세요.\n' > RELEASE_NOTES.md
+
+          {
+            echo "body<<RELEASE_NOTES_EOF"
+            cat RELEASE_NOTES.md
+            echo "RELEASE_NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build for ${{ matrix.platform }}
+    needs: notes
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ''
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # macOS는 Intel/Apple Silicon 공용(universal) 앱으로 빌드
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # 태그 버전을 앱 버전으로 사용 (v0.2.0 -> 0.2.0)
+      - name: Set app version from tag
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p));c.version=process.argv[1];fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n')" "$version"
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 자동 업데이트 서명 키 (저장소 Settings > Secrets에 등록)
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseBody: ${{ needs.notes.outputs.body }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
