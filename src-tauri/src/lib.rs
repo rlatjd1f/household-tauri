@@ -67,10 +67,18 @@ fn with_conn<T>(state: &tauri::State<Db>, f: impl FnOnce(&mut Connection) -> Res
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        let conn = Connection::open(&path).map_err(|e| e.to_string())?;
-        *guard = Some(conn);
+        *guard = Some(open_db(&path)?);
     }
     f(guard.as_mut().unwrap())
+}
+
+/// 내장 SQLite는 외래 키 검사가 기본으로 켜져 있음.
+/// 가계부 내역의 asset_id에는 자산이 아니라 결제수단 분류 id가 들어가므로(기존 앱과 같은 구조)
+/// 기존 파이썬 앱처럼 외래 키 검사를 끔
+fn open_db(path: &std::path::Path) -> Result<Connection, String> {
+    let conn = Connection::open(path).map_err(|e| e.to_string())?;
+    conn.pragma_update(None, "foreign_keys", false).map_err(|e| e.to_string())?;
+    Ok(conn)
 }
 
 fn select_rows(conn: &Connection, sql: &str, params: &[Value]) -> Result<Vec<Map<String, Value>>, String> {
@@ -162,4 +170,25 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ledger_can_store_payment_category_id_in_asset_id() {
+        let path = std::env::temp_dir().join(format!("household-fk-test-{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        let conn = open_db(&path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE assets (id INTEGER PRIMARY KEY);
+             CREATE TABLE ledgers (id INTEGER PRIMARY KEY, asset_id INTEGER,
+                FOREIGN KEY (asset_id) REFERENCES assets (id));
+             INSERT INTO ledgers (asset_id) VALUES (999);",
+        )
+        .unwrap();
+        drop(conn);
+        std::fs::remove_file(&path).unwrap();
+    }
 }
