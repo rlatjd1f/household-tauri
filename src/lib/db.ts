@@ -24,6 +24,14 @@ export interface LedgerInput {
   amount: number; memo: string; payee: string; payment_method: string;
 }
 export type BudgetMap = Record<string, Record<number, number>>;
+export type FlowKind = "저축" | "소비";
+export interface SavingsAccount {
+  id: number; sort_order: number; kind: string; institution: string; name: string;
+  target_amount: number; maturity_amount: number; base_amount: number; memo: string;
+}
+export type SavingsAccountFields = Omit<SavingsAccount, "id" | "sort_order">;
+export interface SavingsFlow { account_id: number; year: number; month: number; kind: FlowKind; amount: number; }
+export interface SavingsGoal { target_amount: number; start_date: string; end_date: string; }
 
 const SCHEMA_VERSION = 1;
 
@@ -97,6 +105,31 @@ const TABLES: Record<string, string> = {
     FOREIGN KEY (household_id) REFERENCES households (id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories (id),
     FOREIGN KEY (asset_id) REFERENCES assets (id))`,
+  // 아래는 새 앱에만 있는 자산 관리용 테이블 (기존 Python 앱은 사용하지 않음)
+  savings_accounts: `CREATE TABLE IF NOT EXISTS savings_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    household_id INTEGER NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    kind TEXT NOT NULL DEFAULT '',
+    institution TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL DEFAULT '',
+    target_amount INTEGER NOT NULL DEFAULT 0,
+    maturity_amount INTEGER NOT NULL DEFAULT 0,
+    base_amount INTEGER NOT NULL DEFAULT 0,
+    memo TEXT NOT NULL DEFAULT '')`,
+  savings_flows: `CREATE TABLE IF NOT EXISTS savings_flows (
+    account_id INTEGER NOT NULL,
+    household_id INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    month INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (account_id, year, month, kind))`,
+  savings_goals: `CREATE TABLE IF NOT EXISTS savings_goals (
+    household_id INTEGER PRIMARY KEY,
+    target_amount INTEGER NOT NULL DEFAULT 0,
+    start_date TEXT NOT NULL DEFAULT '',
+    end_date TEXT NOT NULL DEFAULT '')`,
 };
 
 async function columns(table: string): Promise<string[]> {
@@ -172,7 +205,8 @@ export async function renameHousehold(id: number, name: string): Promise<boolean
 }
 
 const householdRowDeletes = (hid: number) =>
-  ["ledgers", "budgets", "assets", "categories"].map((t) => ({ sql: `DELETE FROM ${t} WHERE household_id = $1`, params: [hid] }));
+  ["ledgers", "budgets", "assets", "categories", "savings_flows", "savings_accounts", "savings_goals"]
+    .map((t) => ({ sql: `DELETE FROM ${t} WHERE household_id = $1`, params: [hid] }));
 
 /** foreign_keys가 꺼져 있어 ON DELETE CASCADE가 동작하지 않으므로 하위 데이터를 직접 삭제 */
 export const deleteHousehold = (hid: number) =>
@@ -224,6 +258,56 @@ export async function updateAsset(id: number, name: string, initialBalance: numb
 }
 
 export const deleteAsset = (id: number) => execute("DELETE FROM assets WHERE id = $1", [id]);
+
+// --- 자산 관리 (저축·적금·자본) ---
+const ACCOUNT_COLS = "id, sort_order, kind, institution, name, target_amount, maturity_amount, base_amount, memo";
+
+export const getSavingsAccounts = (hid: number) =>
+  select<SavingsAccount>(`SELECT ${ACCOUNT_COLS} FROM savings_accounts WHERE household_id = $1 ORDER BY sort_order, id`, [hid]);
+
+export async function addSavingsAccount(hid: number, f: SavingsAccountFields): Promise<number> {
+  const { last_insert_id } = await execute(
+    `INSERT INTO savings_accounts (household_id, sort_order, kind, institution, name, target_amount, maturity_amount, base_amount, memo)
+     VALUES ($1, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM savings_accounts WHERE household_id = $1), $2, $3, $4, $5, $6, $7, $8)`,
+    [hid, f.kind, f.institution, f.name, f.target_amount, f.maturity_amount, f.base_amount, f.memo]);
+  return last_insert_id;
+}
+
+export const updateSavingsAccount = (id: number, f: SavingsAccountFields) =>
+  execute(
+    `UPDATE savings_accounts SET kind = $1, institution = $2, name = $3, target_amount = $4, maturity_amount = $5,
+     base_amount = $6, memo = $7 WHERE id = $8`,
+    [f.kind, f.institution, f.name, f.target_amount, f.maturity_amount, f.base_amount, f.memo, id]);
+
+export const deleteSavingsAccount = (id: number) =>
+  batch([
+    { sql: "DELETE FROM savings_flows WHERE account_id = $1", params: [id] },
+    { sql: "DELETE FROM savings_accounts WHERE id = $1", params: [id] },
+  ]);
+
+/** 모든 연도의 월별 저축·소비 (현재 금액은 전체 기간 합계로 계산) */
+export const getSavingsFlows = (hid: number) =>
+  select<SavingsFlow>("SELECT account_id, year, month, kind, amount FROM savings_flows WHERE household_id = $1", [hid]);
+
+/** 금액이 0이면 지움 */
+export const setSavingsFlow = (hid: number, accountId: number, year: number, month: number, kind: FlowKind, amount: number) =>
+  amount
+    ? execute(
+      `INSERT INTO savings_flows (account_id, household_id, year, month, kind, amount) VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT(account_id, year, month, kind) DO UPDATE SET amount = excluded.amount`,
+      [accountId, hid, year, month, kind, amount])
+    : execute("DELETE FROM savings_flows WHERE account_id = $1 AND year = $2 AND month = $3 AND kind = $4", [accountId, year, month, kind]);
+
+export async function getSavingsGoal(hid: number): Promise<SavingsGoal> {
+  const [goal] = await select<SavingsGoal>("SELECT target_amount, start_date, end_date FROM savings_goals WHERE household_id = $1", [hid]);
+  return goal ?? { target_amount: 0, start_date: "", end_date: "" };
+}
+
+export const saveSavingsGoal = (hid: number, g: SavingsGoal) =>
+  execute(
+    `INSERT INTO savings_goals (household_id, target_amount, start_date, end_date) VALUES ($1, $2, $3, $4)
+     ON CONFLICT(household_id) DO UPDATE SET target_amount = excluded.target_amount, start_date = excluded.start_date, end_date = excluded.end_date`,
+    [hid, g.target_amount, g.start_date, g.end_date]);
 
 // --- 가계부 내역 ---
 export const getLedgerEntries = (hid: number, year: number, month: number) =>
@@ -330,6 +414,47 @@ export interface ImportData {
   ledgers: (Omit<LedgerInput, "category_id" | "asset_id"> & {
     category: [CategoryType, string, string]; payment: [CategoryType, string, string] | null;
   })[];
+  /** '저축 자산 관리' 시트가 있을 때만 (없으면 자산 관리 데이터는 그대로 둠) */
+  savings?: {
+    goal: SavingsGoal;
+    accounts: { fields: SavingsAccountFields; flows: { month: number; kind: FlowKind; amount: number }[] }[];
+  };
+}
+
+/** 자산 관리 가져오기: 구분·금융기관·내용이 같은 자산은 갱신하고 없으면 추가, 해당 연도의 월별 저축·소비는 교체 */
+function savingsImportStatements(hid: number, year: number, savings: NonNullable<ImportData["savings"]>) {
+  const match = "household_id = $1 AND kind = $2 AND institution = $3 AND name = $4";
+  const statements: { sql: string; params?: SqlParam[] }[] = [
+    { sql: "DELETE FROM savings_flows WHERE household_id = $1 AND year = $2", params: [hid, year] },
+  ];
+  if (savings.goal.target_amount || savings.goal.start_date || savings.goal.end_date) {
+    statements.push({
+      sql: `INSERT INTO savings_goals (household_id, target_amount, start_date, end_date) VALUES ($1, $2, $3, $4)
+            ON CONFLICT(household_id) DO UPDATE SET target_amount = excluded.target_amount, start_date = excluded.start_date, end_date = excluded.end_date`,
+      params: [hid, savings.goal.target_amount, savings.goal.start_date, savings.goal.end_date],
+    });
+  }
+  for (const { fields: f, flows } of savings.accounts) {
+    const key: SqlParam[] = [hid, f.kind, f.institution, f.name];
+    statements.push(
+      {
+        sql: `INSERT INTO savings_accounts (household_id, sort_order, kind, institution, name, target_amount, maturity_amount, base_amount, memo)
+              SELECT $1, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM savings_accounts WHERE household_id = $1), $2, $3, $4, $5, $6, $7, $8
+              WHERE NOT EXISTS (SELECT 1 FROM savings_accounts WHERE ${match})`,
+        params: [...key, f.target_amount, f.maturity_amount, f.base_amount, f.memo],
+      },
+      {
+        sql: `UPDATE savings_accounts SET target_amount = $5, maturity_amount = $6, base_amount = $7, memo = $8 WHERE ${match}`,
+        params: [...key, f.target_amount, f.maturity_amount, f.base_amount, f.memo],
+      },
+      ...flows.map((fl) => ({
+        sql: `INSERT OR REPLACE INTO savings_flows (account_id, household_id, year, month, kind, amount)
+              SELECT id, $1, $5, $6, $7, $8 FROM savings_accounts WHERE ${match} ORDER BY id LIMIT 1`,
+        params: [...key, year, fl.month, fl.kind, fl.amount],
+      })),
+    );
+  }
+  return statements;
 }
 
 /**
@@ -365,5 +490,6 @@ export async function importHouseholdYear(hid: number, year: number, data: Impor
       params: [hid, c[0], c[1], c[2], e.date, e.type, e.amount, e.memo, e.payee, p?.[0] ?? null, p?.[1] ?? null, p?.[2] ?? null, e.payment_method],
     };
   });
-  return batch([...before, ...ledgerStatements]);
+  const savingsStatements = data.savings ? savingsImportStatements(hid, year, data.savings) : [];
+  return batch([...before, ...ledgerStatements, ...savingsStatements]);
 }

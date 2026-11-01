@@ -64,6 +64,26 @@ export async function seedPreview(execute: (sql: string, params?: Params) => Pro
     await execute("INSERT OR IGNORE INTO categories (household_id, type, parent_category, sub_category, color) VALUES (1, $1, $2, $3, $4)", [t, p, s, c]);
   }
   await execute("INSERT OR IGNORE INTO assets (household_id, asset_name, initial_balance, current_balance) VALUES (1, '자본금', 32735000, 32735000)");
+  // 자산 관리 예시: [구분, 금융기관, 내용, 목표, 만기시, 기존, 매월 저축, 첫 달 저축]
+  const accounts: [string, string, string, number, number, number, number, number][] = [
+    ["현금", "우리은행", "집보증금", 0, 0, 16000000, 0, 0],
+    ["예금", "우리은행", "25년 예금만기", 0, 0, 10000000, 0, 0],
+    ["ETF", "성리은행", "내집마련", 0, 0, 6000000, 500000, 500000],
+    ["계좌", "성리은행", "축의금", 0, 0, 5000000, 0, 0],
+    ["적금", "카카오은행", "목돈자유적금", 10000000, 10315000, 0, 500000, 1000000],
+    ["연금", "우리은행", "연금저축펀드", 0, 0, 2310000, 200000, 200000],
+  ];
+  for (const [i, [kind, inst, name, target, maturity, base, monthly, first]] of accounts.entries()) {
+    await execute(
+      "INSERT INTO savings_accounts (household_id, sort_order, kind, institution, name, target_amount, maturity_amount, base_amount, memo) VALUES (1, $1, $2, $3, $4, $5, $6, $7, '')",
+      [i + 1, kind, inst, name, target, maturity, base]);
+    for (let m = 1; m <= 4 && monthly; m++) {
+      await execute("INSERT INTO savings_flows (account_id, household_id, year, month, kind, amount) VALUES ($1, 1, $2, $3, '저축', $4)",
+        [i + 1, year, m, m === 1 ? first : monthly]);
+    }
+  }
+  await execute("INSERT INTO savings_goals (household_id, target_amount, start_date, end_date) VALUES (1, 100000000, $1, $2)",
+    [`${year}-01-01`, `${year + 3}-12-31`]);
   for (let m = 1; m <= 12; m++) {
     for (const [name, amount] of [["식비", 300000], ["고정지출(주거)", 400000], ["쇼핑", 100000]] as const) {
       await execute("INSERT OR IGNORE INTO budgets (household_id, year, month, category_name, amount) VALUES (1, $1, $2, $3, $4)", [year, m, name, amount]);

@@ -1,7 +1,11 @@
 // 엑셀 내보내기/가져오기 (기존 앱 migration_util.py와 같은 시트 구성)
 import type ExcelJS from "exceljs";
-import { getExportData, type CategoryType, type EntryType, type ImportData } from "./db";
+import {
+  getExportData, getSavingsAccounts, getSavingsFlows, getSavingsGoal,
+  type CategoryType, type EntryType, type ImportData, type SavingsGoal,
+} from "./db";
 import { pad2 } from "./format";
+import { MONTHS, currentAmounts } from "./savings";
 
 const loadExcel = async () => (await import("exceljs")).default;
 
@@ -99,6 +103,7 @@ const widths = (sheet: ExcelJS.Worksheet, w: Record<number, number>) => { for (c
 export async function buildExportWorkbook(hid: number, year: number): Promise<Uint8Array> {
   const Excel = await loadExcel();
   const { categories, budgets, assets, ledgers } = await getExportData(hid, year);
+  const savings = await getSavingsExportData(hid);
   const wb = new Excel.Workbook();
 
   // 설정하기: 대분류 행마다 중분류를 옆 칸에 쓰고, 중분류 색상은 셀 배경색으로 저장
@@ -173,6 +178,8 @@ export async function buildExportWorkbook(hid: number, year: number): Promise<Ui
   assetSheet.getCell(3, 6).numFmt = "#,##0";
   widths(assetSheet, { 1: 18, 2: 14, 3: 14, 5: 12, 6: 14 });
 
+  writeSavingsSheet(wb, savings, year);
+
   // 1~12월
   for (let m = 1; m <= 12; m++) {
     const sheet = wb.addWorksheet(`${m}월`);
@@ -205,6 +212,90 @@ export async function buildExportWorkbook(hid: number, year: number): Promise<Ui
   }
 
   return new Uint8Array(await wb.xlsx.writeBuffer());
+}
+
+// --- 저축 자산 관리 (새 앱 전용 시트: 기존 Python 앱은 이 시트를 읽지 않음) ---
+const SAVINGS_SHEET = "저축 자산 관리";
+const SAVINGS_HEADERS = ["No", "구분", "금융기관", "내용", "목표 저축액", "현재까지 모은 금액", "만기시 금액", "기존 저축액", "비고", "저축/소비",
+  ...MONTHS.map((m) => `${m}월`)];
+const GOAL_LABELS = { target: "최종 목표 금액", start: "시작일", end: "목표 달성일" };
+
+async function getSavingsExportData(hid: number) {
+  const [accounts, flows, goal] = await Promise.all([getSavingsAccounts(hid), getSavingsFlows(hid), getSavingsGoal(hid)]);
+  return { accounts, flows, goal };
+}
+
+/** 자산마다 두 줄(저축·소비)에 그 해 월별 금액을 씀 */
+function writeSavingsSheet(wb: ExcelJS.Workbook, { accounts, flows, goal }: Awaited<ReturnType<typeof getSavingsExportData>>, year: number) {
+  if (!accounts.length && !goal.target_amount) return;
+  const sheet = wb.addWorksheet(SAVINGS_SHEET);
+  titleRow(sheet, `저축 · 적금 · 자본 관리 (${year}년 월별)`, SAVINGS_HEADERS.length);
+  [[GOAL_LABELS.target, goal.target_amount || null], [GOAL_LABELS.start, goal.start_date], [GOAL_LABELS.end, goal.end_date]]
+    .forEach(([label, value], i) => {
+      sheet.getCell(2, i * 2 + 1).value = label;
+      sheet.getCell(2, i * 2 + 1).font = { bold: true };
+      sheet.getCell(2, i * 2 + 2).value = value || null;
+    });
+  sheet.getCell(2, 2).numFmt = "#,##0";
+  headers(sheet, 4, SAVINGS_HEADERS);
+  const current = currentAmounts(accounts, flows);
+  const amount = new Map(flows.filter((f) => f.year === year).map((f) => [`${f.account_id}|${f.month}|${f.kind}`, f.amount]));
+  accounts.forEach((a, i) => {
+    const r = i * 2 + 5;
+    [i + 1, a.kind, a.institution, a.name, a.target_amount || null, current.get(a.id) ?? 0, a.maturity_amount || null, a.base_amount || null, a.memo]
+      .forEach((v, c) => (sheet.getCell(r, c + 1).value = v));
+    (["저축", "소비"] as const).forEach((kind, k) => {
+      sheet.getCell(r + k, 10).value = kind;
+      sheet.getCell(r + k, 10).fill = solid(kind === "저축" ? "FFDCE9FB" : "FFFDE2E4");
+      MONTHS.forEach((m) => {
+        const cell = sheet.getCell(r + k, 10 + m);
+        cell.value = amount.get(`${a.id}|${m}|${kind}`) ?? null;
+        cell.numFmt = "#,##0";
+      });
+    });
+    for (const c of [5, 6, 7, 8]) sheet.getCell(r, c).numFmt = "#,##0";
+  });
+  widths(sheet, { 1: 6, 2: 10, 3: 14, 4: 18, 5: 14, 6: 16, 7: 14, 8: 14, 9: 20, 10: 10, ...Object.fromEntries(MONTHS.map((m) => [10 + m, 12])) });
+}
+
+function parseSavingsSheet(wb: ExcelJS.Workbook): ImportData["savings"] {
+  const sheet = wb.getWorksheet(SAVINGS_SHEET);
+  if (!sheet) return undefined;
+  const goal: SavingsGoal = { target_amount: 0, start_date: "", end_date: "" };
+  const result: NonNullable<ImportData["savings"]> = { goal, accounts: [] };
+  let headerRow = 0;
+  sheet.eachRow((row, r) => {
+    const values = rowValues(row).map(text);
+    if (!headerRow) {
+      const at = (label: string) => { const i = values.indexOf(label); return i >= 0 ? row.getCell(i + 2).value : null; };
+      if (values.includes(GOAL_LABELS.target)) {
+        goal.target_amount = toInt(at(GOAL_LABELS.target)) ?? 0;
+        goal.start_date = parseExcelDate(at(GOAL_LABELS.start), 0) ?? "";
+        goal.end_date = parseExcelDate(at(GOAL_LABELS.end), 0) ?? "";
+      }
+      if (values.includes("저축/소비") && values.includes("내용")) headerRow = r;
+      return;
+    }
+    const cell = (c: number) => row.getCell(c).value;
+    const kind = text(cell(10));
+    const isNew = [2, 3, 4].some((c) => text(cell(c)));
+    if (isNew) {
+      result.accounts.push({
+        fields: {
+          kind: text(cell(2)), institution: text(cell(3)), name: text(cell(4)),
+          target_amount: toInt(cell(5)) ?? 0, maturity_amount: toInt(cell(7)) ?? 0, base_amount: toInt(cell(8)) ?? 0, memo: text(cell(9)),
+        },
+        flows: [],
+      });
+    }
+    const account = result.accounts.at(-1);
+    if (!account || (kind !== "저축" && kind !== "소비")) return;
+    for (const m of MONTHS) {
+      const amount = toInt(cell(10 + m));
+      if (amount) account.flows.push({ month: m, kind, amount });
+    }
+  });
+  return result;
 }
 
 // --- 가져오기 ---
@@ -308,5 +399,6 @@ export async function parseWorkbook(bytes: Uint8Array): Promise<{ year: number; 
       }
     });
   }
+  data.savings = parseSavingsSheet(wb);
   return { year, data };
 }

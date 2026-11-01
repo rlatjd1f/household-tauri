@@ -16,6 +16,7 @@
     { key: "settings", label: "⚙️  설정" },
     { key: "budget", label: "📊  예산 설정" },
     { key: "asset", label: "💰  자산 설정" },
+    { key: "savings", label: "🏦  자산 관리" },
     { key: "report_monthly", label: "📈  월별 리포트" },
     { key: "report_yearly", label: "📅  연도별 리포트" },
   ];
@@ -27,6 +28,7 @@
     month: () => import("$lib/pages/LedgerPage.svelte"),
     budget: () => import("$lib/pages/BudgetPage.svelte"),
     asset: () => import("$lib/pages/AssetPage.svelte"),
+    savings: () => import("$lib/pages/SavingsPage.svelte"),
     report_monthly: () => import("$lib/pages/MonthlyReportPage.svelte"),
     report_yearly: () => import("$lib/pages/YearlyReportPage.svelte"),
   };
@@ -78,7 +80,8 @@
     const ok = await confirmDialog("데이터 이관 확인",
       `${year}년 예산과 가계부 내역을 엑셀 데이터로 교체하시겠습니까?\n` +
       "분류와 자산은 기존 데이터에 병합되며, 다른 연도의 데이터는 유지됩니다.\n" +
-      `(가계부 내역 ${data.ledgers.length}건, 예산 ${data.budgets.length}건)`, { okText: "가져오기" });
+      `(가계부 내역 ${data.ledgers.length}건, 예산 ${data.budgets.length}건` +
+      `${data.savings ? `, 저축 자산 ${data.savings.accounts.length}개` : ""})`, { okText: "가져오기" });
     if (!ok) return;
     try {
       await importHouseholdYear(app.householdId!, year, data);

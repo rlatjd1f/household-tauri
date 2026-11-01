@@ -1,6 +1,6 @@
 // 앱 전체에서 공유하는 상태: 선택한 가계부, 연도, 현재 화면
 
-export type PageKey = "settings" | "budget" | "asset" | "report_monthly" | "report_yearly" | `month_${number}`;
+export type PageKey = "settings" | "budget" | "asset" | "savings" | "report_monthly" | "report_yearly" | `month_${number}`;
 
 export const app = $state({
   householdId: null as number | null,
