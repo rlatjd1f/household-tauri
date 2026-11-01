@@ -208,15 +208,17 @@
   function onCellKeyDown(e: CellKeyDownEvent<LedgerRow>) {
     const key = (e.event as KeyboardEvent | undefined)?.key;
     if (key !== "Enter" || e.rowIndex == null || !api) return;
-    // 마지막 행에서 엔터 → 새 행 추가 후 같은 열로 이동 (편집 중이면 편집을 마친 뒤)
-    if (e.rowIndex === api.getDisplayedRowCount() - 1) {
-      const col = e.column.getColId();
-      setTimeout(() => {
-        if (api!.getEditingCells().length) return;
-        addRow();
-        api!.setFocusedCell(api!.getDisplayedRowCount() - 1, col === "status" ? "date" : col);
-      }, 0);
-    }
+    // 편집을 마치는 엔터(입력칸·드롭다운에서 누른 엔터)는 입력 확정만 하고,
+    // 편집 중이 아닌 셀에서 마지막 행일 때 누른 엔터만 새 행 추가 (입력을 확정할 때마다 행이 늘어나지 않도록).
+    // 이 이벤트는 편집이 끝난 뒤에 오므로 편집 상태 대신 키를 누른 위치로 구분
+    const target = (e.event as KeyboardEvent).target as HTMLElement | null;
+    if (!target?.classList.contains("ag-cell") || e.rowIndex !== api.getDisplayedRowCount() - 1) return;
+    const col = e.column.getColId();
+    setTimeout(() => {
+      if (api!.getEditingCells().length) return;
+      addRow();
+      api!.setFocusedCell(api!.getDisplayedRowCount() - 1, col === "status" ? "date" : col);
+    }, 0);
   }
 
   onMount(() => {
