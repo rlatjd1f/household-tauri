@@ -67,8 +67,8 @@
     {/each}
   </ul>
   <div class="row">
-    <button onclick={create}>+ 새 가계부 만들기</button>
-    <button onclick={rename} disabled={!selected}>🏷️ 이름 변경</button>
+    <button class="weak" onclick={create}>+ 새 가계부 만들기</button>
+    <button class="secondary" onclick={rename} disabled={!selected}>🏷️ 이름 변경</button>
     <button class="danger" onclick={remove} disabled={!selected}>🗑️ 삭제</button>
   </div>
   <button class="choose" onclick={choose}>선택 완료 (더블클릭 가능)</button>
@@ -76,14 +76,18 @@
 </main>
 
 <style>
-  main { max-width: 640px; margin: 0 auto; padding: 40px 24px; display: flex; flex-direction: column; gap: 18px; height: 100vh; }
-  h1 { text-align: center; font-size: 20px; color: var(--blue); margin: 0; }
-  .list { list-style: none; margin: 0; padding: 10px; flex: 1; overflow: auto; background: #fff; border: 1px solid var(--border); border-radius: 12px; }
-  .item { width: 100%; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--gray-soft);
-    border-radius: 8px; color: var(--text-strong); font-size: 15px; font-weight: 500; padding: 18px 12px; }
-  .item:hover { background: var(--gray-soft); }
-  .item.active { background: var(--blue-soft); color: var(--blue); }
-  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .choose { height: 50px; font-size: 16px; }
-  .version { text-align: center; color: #9aa0a6; font-size: 12px; margin: 0; }
+  main { max-width: 600px; margin: 0 auto; padding: 48px 24px 32px; display: flex; flex-direction: column; gap: 16px; height: 100vh; }
+  h1 { font-size: 24px; font-weight: 700; color: var(--text-strong); margin: 0 0 8px 4px; }
+  .list { list-style: none; margin: 0; padding: 8px; flex: 1; overflow: auto; background: var(--card); border-radius: 20px; }
+  .item { width: 100%; text-align: left; background: transparent; border-radius: 14px; color: var(--text-strong);
+    font-size: 16px; font-weight: 600; padding: 18px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .item:hover:not(.active) { background: var(--gray-soft) !important; }
+  .item.active, .item.active:hover { background: var(--blue-soft); color: var(--blue-text); }
+  .item .muted { font-size: 13px; font-weight: 400; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  /* 회색 배경 위라서 회색 버튼은 흰색으로 */
+  .row .secondary { background: var(--card); }
+  .row .secondary:hover:not(:disabled) { background: var(--gray-hover); }
+  .choose { height: 56px; font-size: 17px; border-radius: 16px; }
+  .version { text-align: center; color: var(--placeholder); font-size: 12px; margin: 0; }
 </style>

@@ -4,8 +4,8 @@ import { formatNumber } from "./format";
 /** 이 대분류는 고정비, 나머지는 변동비 */
 export const FIXED_CATEGORIES = ["고정지출(주거)", "이자", "월세", "상환"];
 
-export const CHART_FONT = { fontFamily: "Malgun Gothic, Apple SD Gothic Neo, sans-serif", fontSize: 11 };
-export const COLORS = { blue: "#1a73e8", red: "#d93025", green: "#188038", grid: "#e8eaed", axis: "#dadce0", text: "#5f6368" };
+export const CHART_FONT = { fontFamily: "Pretendard Variable, Pretendard, Malgun Gothic, Apple SD Gothic Neo, sans-serif", fontSize: 11 };
+export const COLORS = { blue: "#3182f6", red: "#f04452", green: "#03b26c", grid: "#f2f4f6", axis: "#e5e8eb", text: "#8b95a1" };
 
 export const valueAxis = () => ({
   type: "value" as const,

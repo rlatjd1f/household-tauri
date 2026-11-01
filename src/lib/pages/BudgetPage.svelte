@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
   import {
-    AllCommunityModule, ModuleRegistry, createGrid, themeQuartz,
+    AllCommunityModule, ModuleRegistry, createGrid,
     type ColDef, type GridApi, type ICellRendererParams,
   } from "ag-grid-community";
+  import { gridTheme } from "$lib/gridTheme";
   import { app } from "$lib/state.svelte";
   import { getBudgets, getCategories, saveBudgets } from "$lib/db";
   import { formatNumber, parseAmount } from "$lib/format";
@@ -78,20 +79,20 @@
     });
 
     const monthCols: ColDef<BudgetRow>[] = MONTHS.map((m) => ({
-      field: `m${m}` as keyof BudgetRow, headerName: `${m}월`, flex: 1, minWidth: 80, type: "rightAligned",
+      field: `m${m}` as keyof BudgetRow, headerName: `${m}월`, flex: 1, minWidth: 96, type: "rightAligned",
       cellDataType: false, cellEditor: "agTextCellEditor",
       editable: (p) => !p.node.rowPinned,
       valueFormatter: (p) => formatNumber(p.value),
       valueParser: (p) => { const v = parseAmount(p.newValue); return v == null || v < 0 ? p.oldValue : v; },
     }));
     api = createGrid<BudgetRow>(el, {
-      theme: themeQuartz.withParams({ fontFamily: "inherit", fontSize: 13, accentColor: "#1a73e8", headerBackgroundColor: "#f8f9fa", rowHeight: 40, borderColor: "#dadce0" }),
+      theme: gridTheme(),
       rowData: data,
       pinnedBottomRowData: [totalRow(data)],
       columnDefs: [
         { field: "name", headerName: "항목", pinned: "left", width: 160, editable: false,
           valueFormatter: (p) => (EMOJIS[p.value] && !p.node?.rowPinned ? `${EMOJIS[p.value]} ${p.value}` : p.value) },
-        { colId: "apply", headerName: "일괄 적용", pinned: "left", width: 108, cellStyle: { display: "flex", alignItems: "center", justifyContent: "center" }, editable: false, cellRenderer: applyButton },
+        { colId: "apply", headerName: "일괄 적용", pinned: "left", width: 108, cellClass: "apply-cell", editable: false, cellRenderer: applyButton },
         ...monthCols,
       ],
       defaultColDef: { sortable: false, resizable: true, suppressMovable: true, suppressHeaderMenuButton: true },
@@ -99,7 +100,7 @@
       enterNavigatesVertically: true,
       enterNavigatesVerticallyAfterEdit: true,
       stopEditingWhenCellsLoseFocus: true,
-      getRowStyle: (p) => (p.node.rowPinned ? { background: "#f1f3f4", color: "#1a73e8", fontWeight: "700" } : undefined),
+      getRowStyle: (p) => (p.node.rowPinned ? { background: "#f9fafb", color: "#191f28", fontWeight: "700" } : undefined),
       onCellValueChanged: () => { dirty = true; refreshTotal(); },
     });
     app.hasUnsaved = () => dirty;
@@ -127,9 +128,11 @@
 <style>
   .page { display: flex; flex-direction: column; gap: 14px; height: 100%; }
   header { display: flex; align-items: center; gap: 14px; }
-  h2 { margin: 0; font-size: 18px; color: var(--blue); }
+  h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--text-strong); }
   .spacer { flex: 1; }
   .grid { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
-  .grid :global(button.apply) { background: var(--blue-soft); color: var(--blue); border: 1px solid var(--blue); border-radius: 4px; padding: 3px 8px; font-size: 11px; }
-  .grid :global(button.apply:hover) { background: var(--blue); color: #fff; }
+  .grid :global(.apply-cell) { display: flex; align-items: center; justify-content: center; padding: 0; }
+  .grid :global(button.apply) { background: var(--blue-soft); color: var(--blue-text); border-radius: 8px; padding: 0 10px;
+    height: 28px; line-height: 28px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .grid :global(button.apply:hover) { background: var(--blue-soft-hover); }
 </style>

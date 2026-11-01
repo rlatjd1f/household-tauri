@@ -1,22 +1,30 @@
-/* 기존 앱(라이트 테마)의 색과 모양을 그대로 따름 */
+/* 토스 스타일: 밝은 회색 배경 위 흰 카드, 토스 블루, 회색 단계 글자색, 둥근 모서리 */
 :root {
-  --blue: #1a73e8;
-  --blue-hover: #1765cc;
-  --blue-soft: #e8f0fe;
-  --red: #d93025;
-  --green: #188038;
-  --text: #3c4043;
-  --text-strong: #202124;
-  --muted: #5f6368;
-  --border: #dadce0;
-  --bg: #f8f9fa;
+  --blue: #3182f6;
+  --blue-hover: #1b64da;
+  --blue-text: #1b64da;
+  --blue-soft: #e8f3ff;
+  --blue-soft-hover: #d0e5ff;
+  --red: #f04452;
+  --red-soft: #ffeeee;
+  --green: #03b26c;
+  --text: #4e5968;
+  --text-strong: #191f28;
+  --text-sub: #6b7684;
+  --muted: #8b95a1;
+  --placeholder: #b0b8c1;
+  --border: #e5e8eb;
+  --bg: #f2f4f6;
   --card: #ffffff;
-  --gray-soft: #f1f3f4;
-  --radius: 8px;
-  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+  --gray-soft: #f2f4f6;
+  --gray-hover: #e5e8eb;
+  --radius: 16px;
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
   font-size: 13px;
+  letter-spacing: -0.01em;
   color: var(--text);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
 
 * { box-sizing: border-box; }
@@ -24,27 +32,38 @@ html, body { margin: 0; height: 100%; background: var(--bg); }
 body { overflow: hidden; }
 
 button {
-  font: inherit; font-weight: 600; border-radius: 6px; padding: 7px 16px; cursor: pointer;
-  border: 1px solid var(--blue); background: var(--blue); color: #fff;
+  font: inherit; font-weight: 600; border-radius: 10px; padding: 8px 16px; cursor: pointer;
+  border: none; background: var(--blue); color: #fff;
+  transition: background-color 0.15s, color 0.15s, transform 0.1s;
 }
 button:hover:not(:disabled) { background: var(--blue-hover); }
-button:disabled { opacity: 0.5; cursor: default; }
-button.secondary { background: var(--gray-soft); color: var(--text); border-color: var(--border); }
-button.secondary:hover:not(:disabled) { background: #e8eaed; }
-button.danger { background: var(--gray-soft); color: var(--red); border-color: var(--border); }
-button.danger:hover:not(:disabled) { background: #fce8e6; }
-button.ghost { background: transparent; border-color: transparent; color: var(--text); }
+button:active:not(:disabled) { transform: scale(0.98); }
+button:disabled { opacity: 0.4; cursor: default; }
+/* 연한 버튼 (보조 동작) */
+button.weak { background: var(--blue-soft); color: var(--blue-text); }
+button.weak:hover:not(:disabled) { background: var(--blue-soft-hover); }
+button.secondary { background: var(--gray-soft); color: var(--text); }
+button.secondary:hover:not(:disabled) { background: var(--gray-hover); }
+button.danger { background: var(--red-soft); color: var(--red); }
+button.danger:hover:not(:disabled) { background: #ffd4d6; }
+button.ghost { background: transparent; color: var(--text); }
 button.ghost:hover:not(:disabled) { background: var(--gray-soft); }
 
 input, select {
-  font: inherit; color: var(--text-strong); background: #fff; border: 1px solid var(--border);
-  border-radius: 6px; padding: 7px 10px;
+  font: inherit; color: var(--text-strong); background: var(--gray-soft); border: 1px solid transparent;
+  border-radius: 10px; padding: 8px 12px; transition: border-color 0.15s, background-color 0.15s;
 }
-input:focus, select:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+input::placeholder { color: var(--placeholder); }
+input:hover:not(:focus), select:hover:not(:focus) { background: var(--gray-hover); }
+input:focus, select:focus { outline: none; background: #fff; border-color: var(--blue); }
 
-.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
-.card-title { font-size: 15px; font-weight: 700; color: var(--blue); margin: 0 0 10px; }
+.card { background: var(--card); border-radius: var(--radius); padding: 20px; }
+.card-title { font-size: 16px; font-weight: 700; color: var(--text-strong); margin: 0 0 12px; }
 .muted { color: var(--muted); }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .over { color: var(--red); }
 .ok { color: var(--green); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d1d6db; border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }

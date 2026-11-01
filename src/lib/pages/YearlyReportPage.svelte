@@ -39,15 +39,15 @@
   const deficitMonths = $derived(months.filter((m) => m.net < 0).map((m) => `${m.month}월`));
 
   const trendOption = $derived({
-    title: { text: `${app.year}년 재정 흐름 (단위: 원)`, left: "center", textStyle: { fontSize: 14, fontWeight: "bold", color: "#202124" } },
+    title: { text: `${app.year}년 재정 흐름 (단위: 원)`, left: "center", textStyle: { fontSize: 14, fontWeight: "bold", color: "#191f28" } },
     tooltip: tooltip(),
-    legend: { top: 28, data: ["수입", "지출", "순현금흐름"] },
-    grid: { left: 70, right: 30, top: 70, bottom: 30 },
+    legend: { top: 38, data: ["수입", "지출", "순현금흐름"] },
+    grid: { left: 70, right: 30, top: 84, bottom: 30 },
     xAxis: categoryAxis(months.map((m) => `${m.month}월`)),
     yAxis: valueAxis(),
     series: [
-      { name: "순현금흐름", type: "bar", barMaxWidth: 36,
-        data: months.map((m) => ({ value: m.net, itemStyle: { color: m.net >= 0 ? "rgba(24,128,56,.25)" : "rgba(217,48,37,.25)" } })) },
+      { name: "순현금흐름", type: "bar", barMaxWidth: 36, itemStyle: { color: "rgba(3,178,108,.45)" },
+        data: months.map((m) => ({ value: m.net, itemStyle: { color: m.net >= 0 ? "rgba(3,178,108,.25)" : "rgba(240,68,82,.25)" } })) },
       { name: "수입", type: "line", data: months.map((m) => m.income), itemStyle: { color: COLORS.blue }, areaStyle: { opacity: 0.08 } },
       { name: "지출", type: "line", data: months.map((m) => m.expense), itemStyle: { color: COLORS.red }, areaStyle: { opacity: 0.08 } },
     ],
@@ -110,16 +110,17 @@
   .page { display: flex; flex-direction: column; gap: 16px; min-height: 100%; }
   .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
   .kpi p { margin: 2px 0; }
-  .label, .sub { font-size: 12px; color: var(--muted); }
-  .value { font-size: 22px; font-weight: 700; color: var(--muted); }
+  .label { font-size: 13px; color: var(--text-sub); }
+  .sub { font-size: 12px; color: var(--muted); }
+  .value { font-size: 24px; font-weight: 700; color: var(--text-strong); letter-spacing: -0.02em; white-space: nowrap; }
   .blue { color: var(--blue); }
   .chart-card { display: flex; flex-direction: column; height: 400px; }
   .chart { flex: 1; min-height: 0; }
-  .bottom { display: grid; grid-template-columns: 5fr 4fr 5fr; gap: 16px; }
+  .bottom { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 5fr); gap: 16px; }
   .table-wrap { max-height: 260px; overflow: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { padding: 6px 8px; border-bottom: 1px solid var(--gray-soft); text-align: left; }
-  th { position: sticky; top: 0; background: #fff; font-weight: 600; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text-strong); }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--gray-soft); text-align: left; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f9fafb; font-weight: 600; color: var(--text-sub); }
   th.num, td.num { text-align: right; }
   .insights p { line-height: 1.7; font-size: 14px; margin: 6px 0; }
 </style>

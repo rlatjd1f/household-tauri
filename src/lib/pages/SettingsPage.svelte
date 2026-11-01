@@ -10,5 +10,5 @@
 </div>
 
 <style>
-  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; height: 100%; }
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; height: 100%; }
 </style>

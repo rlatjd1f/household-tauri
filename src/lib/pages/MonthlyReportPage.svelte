@@ -50,13 +50,13 @@
   onMount(async () => load(await defaultMonth()));
 
   const categoryOption = $derived({
-    title: { text: `${month}월 항목별 지출`, left: "center", textStyle: { fontSize: 14, fontWeight: "bold", color: "#202124" } },
+    title: { text: `${month}월 항목별 지출`, left: "center", textStyle: { fontSize: 14, fontWeight: "bold", color: "#191f28" } },
     tooltip: tooltip(),
     grid: { left: 60, right: 20, top: 50, bottom: 30 },
     xAxis: categoryAxis(cats.map((c) => c.parent_category)),
     yAxis: valueAxis(),
     series: [{
-      type: "bar", data: cats.map((c) => c.total), barMaxWidth: 60, itemStyle: { color: COLORS.blue },
+      type: "bar", data: cats.map((c) => c.total), barMaxWidth: 48, itemStyle: { color: COLORS.blue, borderRadius: [6, 6, 0, 0] },
       label: { show: true, position: "top", formatter: (p: { value: number }) => formatNumber(p.value), color: COLORS.blue, fontWeight: "bold", ...CHART_FONT },
     }],
   });
@@ -70,7 +70,7 @@
       // 지출 없는 날은 비워 두어 이어진 것처럼 보이지 않게 막대로 표시
       xAxis: categoryAxis(days.map((d) => `${d}일`), { axisLabel: { interval: 4, color: COLORS.text, ...CHART_FONT } }),
       yAxis: valueAxis(),
-      series: [{ type: "bar", data: days.map((d) => byDay.get(d) ?? 0), itemStyle: { color: COLORS.blue }, barMaxWidth: 18 }],
+      series: [{ type: "bar", data: days.map((d) => byDay.get(d) ?? 0), itemStyle: { color: COLORS.blue, borderRadius: [4, 4, 0, 0] }, barMaxWidth: 18 }],
     };
   });
 
@@ -157,21 +157,21 @@
 <style>
   .page { display: flex; flex-direction: column; gap: 16px; min-height: 100%; }
   .months { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .month { background: var(--gray-soft); color: var(--text); border-color: transparent; padding: 6px 14px; font-weight: 500; }
-  .month:hover:not(.active) { background: #e8eaed !important; }
-  .month.active { background: var(--blue); color: #fff; font-weight: 700; }
+  .month { background: var(--card); color: var(--text); padding: 7px 16px; font-weight: 500; border-radius: 20px; }
+  .month:hover:not(.active) { background: var(--gray-hover) !important; }
+  .month.active { background: var(--text-strong); color: #fff; font-weight: 700; }
   .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .kpis p { margin: 4px 0; }
-  .big { font-size: 18px; }
+  .big { font-size: 20px; font-weight: 700; color: var(--text-strong); }
   .row { display: grid; gap: 16px; }
   .row.two { grid-template-columns: 4fr 3fr; height: 360px; }
   .row.three { grid-template-columns: 7fr 5fr; height: 300px; }
   .chart-card { display: flex; flex-direction: column; min-height: 0; }
   .chart { flex: 1; min-height: 0; }
   .table-wrap { flex: 1; overflow: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { padding: 6px 8px; border-bottom: 1px solid var(--gray-soft); text-align: left; white-space: nowrap; }
-  th { position: sticky; top: 0; background: #fff; font-weight: 600; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text-strong); }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--gray-soft); text-align: left; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f9fafb; font-weight: 600; color: var(--text-sub); }
   th.num, td.num { text-align: right; }
   .center { text-align: center; }
   .insights p { line-height: 1.7; font-size: 14px; margin: 6px 0; }

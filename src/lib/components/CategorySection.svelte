@@ -118,7 +118,7 @@
     <input placeholder="중분류" bind:value={subInput} onkeydown={(e) => e.key === "Enter" && add()} />
   </div>
   <div class="buttons">
-    <button onclick={add} disabled={selection?.kind === "sub"}>추가</button>
+    <button class="weak" onclick={add} disabled={selection?.kind === "sub"}>추가</button>
     <button class="secondary" onclick={remove}>삭제</button>
   </div>
   <p class="hint muted">더블클릭(F2)으로 이름 수정 · Delete로 삭제</p>
@@ -130,20 +130,21 @@
 
 <style>
   .section { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-  h3 { margin: 0 0 10px; font-size: 16px; font-weight: 600; color: var(--text-strong); }
-  .tree { flex: 1; overflow: auto; border: 1px solid var(--border); border-radius: 8px; padding: 6px; outline: none; }
+  h3 { margin: 0 0 12px; font-size: 16px; font-weight: 700; color: var(--text-strong); }
+  .tree { flex: 1; overflow: auto; background: #f9fafb; border: 1px solid transparent; border-radius: 12px; padding: 6px; outline: none; }
   .tree:focus-visible { border-color: var(--blue); }
-  .parent-row, .sub-row { display: flex; align-items: center; border-radius: 6px; }
-  .parent-row { background: var(--blue-soft); margin-top: 4px; }
-  .selected { box-shadow: inset 0 0 0 2px var(--blue); }
+  .parent-row, .sub-row { display: flex; align-items: center; border-radius: 8px; }
+  .parent-row { background: var(--card); margin-top: 4px; }
+  .sub-row:hover, .parent-row:hover { background: var(--gray-hover); }
+  .selected, .selected:hover { background: var(--blue-soft); box-shadow: inset 0 0 0 1.5px var(--blue); }
   .toggle, .label { background: transparent; border: none; color: inherit; font-weight: inherit; padding: 6px; }
   .toggle { width: 24px; padding: 6px 0; color: var(--muted); }
   .toggle:hover, .label:hover { background: transparent !important; }
   .label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; }
-  .label.parent { color: #174ea6; font-weight: 700; }
+  .label.parent { color: var(--text-strong); font-weight: 700; }
   .sub-row .label { padding-left: 30px; }
-  .color { width: 26px; height: 18px; padding: 0; border-radius: 8px; border: 1px solid var(--blue); flex: none; margin-right: 4px; }
-  .color.empty { border-color: var(--border); }
+  .color { width: 26px; height: 18px; padding: 0; border-radius: 9px; border: 1px solid rgba(0, 29, 58, 0.18); flex: none; margin-right: 4px; }
+  .color.empty { border: 1px dashed var(--placeholder); background: transparent; }
   .inputs, .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   .inputs input { min-width: 0; }
   .hint { margin: 6px 0 0; font-size: 11px; }

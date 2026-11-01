@@ -54,13 +54,13 @@
 
 <div class="page">
   <div class="summary card">
-    <span class="title">{app.year}년 {month}월</span> |
-    월 예산: <b>{formatNumber(monthBudget)}</b> |
-    지출: <b class={remaining < 0 ? "over" : "ok"}>{formatNumber(summary.expense)}</b> |
-    남은 예산: <b class={remaining < 0 ? "over" : "ok"}>{formatNumber(remaining)}</b> |
-    수입: <b>{formatNumber(summary.income)}</b>
+    <h2 class="title">{app.year}년 {month}월</h2>
+    <div class="stat"><span>월 예산</span><b>{formatNumber(monthBudget)}원</b></div>
+    <div class="stat"><span>지출</span><b class={remaining < 0 ? "over" : "ok"}>{formatNumber(summary.expense)}원</b></div>
+    <div class="stat"><span>남은 예산</span><b class={remaining < 0 ? "over" : "ok"}>{formatNumber(remaining)}원</b></div>
+    <div class="stat"><span>수입</span><b>{formatNumber(summary.income)}원</b></div>
     {#if summary.filtered}
-      <span class="muted filtered">| 🔍 검색 결과: 지출 {formatNumber(summary.filteredExpense)} · 수입 {formatNumber(summary.filteredIncome)}</span>
+      <span class="muted filtered">🔍 검색 결과: 지출 {formatNumber(summary.filteredExpense)} · 수입 {formatNumber(summary.filteredIncome)}</span>
     {/if}
   </div>
 
@@ -73,7 +73,7 @@
         </header>
         <LedgerGrid bind:this={expenseGrid} type="지출" {month} entries={entries.filter((e) => e.type === "지출")} {categories} onchange={refreshSummary} />
         <footer>
-          <button onclick={() => expenseGrid?.addRow()}>+ 지출 행 추가</button>
+          <button class="weak" onclick={() => expenseGrid?.addRow()}>+ 지출 행 추가</button>
           <button class="secondary" onclick={() => expenseGrid?.deleteSelected()}>- 삭제</button>
           <span class="spacer"></span>
           <button title="저장하지 않은 행(❓)을 모두 저장합니다. (Ctrl+S: 지출·소득 모두)" onclick={() => saveAll([expenseGrid])}>💾 모두 저장</button>
@@ -86,7 +86,7 @@
         </header>
         <LedgerGrid bind:this={incomeGrid} type="수입" {month} entries={entries.filter((e) => e.type === "수입")} {categories} onchange={refreshSummary} />
         <footer>
-          <button onclick={() => incomeGrid?.addRow()}>+ 수입 행 추가</button>
+          <button class="weak" onclick={() => incomeGrid?.addRow()}>+ 수입 행 추가</button>
           <button class="secondary" onclick={() => incomeGrid?.deleteSelected()}>- 삭제</button>
           <span class="spacer"></span>
           <button title="저장하지 않은 행(❓)을 모두 저장합니다. (Ctrl+S: 지출·소득 모두)" onclick={() => saveAll([incomeGrid])}>💾 모두 저장</button>
@@ -97,18 +97,21 @@
 </div>
 
 <style>
-  .page { display: flex; flex-direction: column; gap: 15px; height: 100%; }
-  .summary { font-size: 15px; font-weight: 600; padding: 10px 15px; }
-  .summary .title { color: var(--blue); }
-  .filtered { font-weight: normal; }
-  .tables { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 65fr) minmax(340px, 35fr); gap: 12px; }
-  .box { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 12px; gap: 8px; }
+  .page { display: flex; flex-direction: column; gap: 16px; height: 100%; }
+  .summary { display: flex; align-items: center; gap: 36px; padding: 18px 24px; flex-wrap: wrap; row-gap: 8px; }
+  .title { margin: 0; font-size: 20px; font-weight: 700; color: var(--text-strong); }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat span { font-size: 12px; color: var(--muted); }
+  .stat b { font-size: 17px; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+  .stat b.over { color: var(--red); }
+  .stat b.ok { color: var(--green); }
+  .filtered { font-size: 12px; }
+  .tables { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 65fr) minmax(340px, 35fr); gap: 16px; }
+  .box { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 18px; gap: 12px; }
   header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  h3 { margin: 0; font-size: 14px; white-space: nowrap; }
-  .expense { color: var(--red); }
-  .income { color: var(--blue); }
-  header input { width: 150px; min-width: 80px; flex-shrink: 1; font-size: 12px; padding: 4px 8px; }
-  footer { display: flex; gap: 6px; }
-  footer button { white-space: nowrap; padding: 7px 12px; }
+  h3 { margin: 0; font-size: 16px; font-weight: 700; white-space: nowrap; color: var(--text-strong); }
+  header input { width: 160px; min-width: 80px; flex-shrink: 1; font-size: 12px; padding: 6px 10px; }
+  footer { display: flex; gap: 8px; }
+  footer button { white-space: nowrap; padding: 8px 14px; }
   .spacer { flex: 1; }
 </style>

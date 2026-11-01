@@ -40,16 +40,16 @@
 </div>
 
 <style>
-  .backdrop { position: fixed; inset: 0; background: rgba(32,33,36,.35); display: grid; place-items: center; z-index: 90; }
-  .box { background: #fff; border-radius: 12px; padding: 18px 20px; width: 380px; box-shadow: 0 8px 28px rgba(0,0,0,.2); }
-  h2 { margin: 0 0 12px; font-size: 15px; color: var(--text-strong); }
-  .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
-  .swatch { height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 6px; }
-  .swatch:hover { border-color: var(--blue); }
-  .swatch.picked { outline: 2px solid var(--blue); outline-offset: 1px; }
-  .custom { display: flex; align-items: center; gap: 10px; margin: 14px 0; font-weight: 600; }
-  .custom input { width: 44px; height: 30px; padding: 2px; }
-  .preview { flex: 1; text-align: center; border: 1px solid var(--border); border-radius: 6px; padding: 6px; }
+  .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); display: grid; place-items: center; z-index: 90; }
+  .box { background: #fff; border-radius: 20px; padding: 24px; width: 400px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16); }
+  h2 { margin: 0 0 16px; font-size: 18px; font-weight: 700; color: var(--text-strong); }
+  .grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; }
+  .swatch { height: 30px; padding: 0; border: 1px solid rgba(0, 29, 58, 0.12); border-radius: 50%; aspect-ratio: 1; }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.picked { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .custom { display: flex; align-items: center; gap: 10px; margin: 18px 0; font-weight: 600; color: var(--text-strong); }
+  .custom input { width: 44px; height: 32px; padding: 2px; }
+  .preview { flex: 1; text-align: center; border-radius: 10px; padding: 8px; }
   .actions { display: flex; gap: 8px; }
   .spacer { flex: 1; }
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { AllCommunityModule, ModuleRegistry, createGrid, themeQuartz, type GridApi } from "ag-grid-community";
+  import { AllCommunityModule, ModuleRegistry, createGrid, type GridApi } from "ag-grid-community";
+  import { gridTheme } from "$lib/gridTheme";
   import { app } from "$lib/state.svelte";
   import { addAsset, deleteAsset, getAssets, updateAsset, type Asset } from "$lib/db";
   import { formatNumber, parseAmount } from "$lib/format";
@@ -33,7 +34,7 @@
 
   onMount(async () => {
     api = createGrid<Asset>(el, {
-      theme: themeQuartz.withParams({ fontFamily: "inherit", fontSize: 13, accentColor: "#1a73e8", headerBackgroundColor: "#f8f9fa", rowHeight: 40, borderColor: "#dadce0" }),
+      theme: gridTheme(),
       rowData: await getAssets(app.householdId!),
       columnDefs: [
         { field: "asset_name", headerName: "자산명", flex: 2, editable: true },
@@ -77,6 +78,6 @@
   .grid { flex: 1; min-height: 0; padding: 0; overflow: hidden; }
   .hint { margin: 0; font-size: 12px; }
   .form { display: flex; gap: 10px; align-items: center; }
-  .form label { display: flex; align-items: center; gap: 6px; flex: 1; font-weight: 600; }
+  .form label { display: flex; align-items: center; gap: 8px; flex: 1; font-weight: 600; color: var(--text-strong); }
   .form input { flex: 1; }
 </style>
