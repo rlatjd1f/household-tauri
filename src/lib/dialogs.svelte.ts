@@ -6,18 +6,23 @@ export interface DialogState {
   message: string;
   value: string;
   okText: string;
+  /** 있으면 취소·확인 사이에 세 번째 버튼을 표시 (누르면 ALT를 돌려줌) */
+  altText: string;
   danger: boolean;
   /** 대화상자를 띄운 바로 그 키 입력(예: 셀 편집을 마친 엔터)이 대화상자를 닫지 않도록, 다음 이벤트부터 키를 받음 */
   armed: boolean;
-  resolve: (result: string | boolean | null) => void;
+  resolve: (result: DialogResult) => void;
 }
+
+export const ALT = Symbol("alt");
+type DialogResult = string | boolean | null | typeof ALT;
 
 export const dialog = $state<{ current: DialogState | null }>({ current: null });
 
 function open(kind: DialogState["kind"], title: string, message: string, opts: Partial<DialogState> = {}) {
-  return new Promise<string | boolean | null>((resolve) => {
+  return new Promise<DialogResult>((resolve) => {
     dialog.current = {
-      kind, title, message, value: "", okText: "확인", danger: false, armed: false, ...opts,
+      kind, title, message, value: "", okText: "확인", altText: "", danger: false, armed: false, ...opts,
       resolve: (result) => { dialog.current = null; resolve(result); },
     };
     const opened = dialog.current;
@@ -41,4 +46,10 @@ export const confirmDialog = async (title: string, message: string, opts: { okTe
 export const promptDialog = async (title: string, message: string, value = "") => {
   const result = await open("prompt", title, message, { value });
   return typeof result === "string" ? result : null;
+};
+
+/** 입력 + 세 번째 선택지. 입력값, ALT(세 번째 버튼) 또는 null(취소)을 돌려줌 */
+export const promptWithAltDialog = async (title: string, message: string, value: string, altText: string) => {
+  const result = await open("prompt", title, message, { value, altText });
+  return typeof result === "string" || result === ALT ? result : null;
 };

@@ -2,9 +2,9 @@
   import { onMount, type Component } from "svelte";
   import { getVersion } from "@tauri-apps/api/app";
   import { app, monthOf, type PageKey } from "$lib/state.svelte";
-  import { alertDialog, confirmDialog, promptDialog, showNotice } from "$lib/dialogs.svelte";
-  import { importHouseholdYear } from "$lib/db";
-  import { pickXlsx, saveXlsx } from "$lib/files";
+  import { ALT, alertDialog, confirmDialog, promptWithAltDialog, showNotice } from "$lib/dialogs.svelte";
+  import { getDataYears, importHouseholdYear } from "$lib/db";
+  import { pickFolder, pickXlsx, safeFileName, saveXlsx, saveXlsxToFolder } from "$lib/files";
   import Placeholder from "$lib/pages/Placeholder.svelte";
 
   let { onback }: { onback: () => void } = $props();
@@ -30,13 +30,15 @@
     report_monthly: () => import("$lib/pages/MonthlyReportPage.svelte"),
     report_yearly: () => import("$lib/pages/YearlyReportPage.svelte"),
   };
-  let PageComponent = $state<Component<any>>(Placeholder);
+  // 불러온 화면과 그 화면의 키를 함께 보관해, 다음 화면을 불러오는 동안 이전 화면이 새 값으로 잠깐 다시 그려지지 않게 함
+  let loaded = $state<{ key: string; component: Component<any> }>({ key: "", component: Placeholder });
+  const pageKey = $derived(monthOf(app.page) ? "month" : app.page);
 
   $effect(() => {
-    const key = monthOf(app.page) ? "month" : app.page;
+    const key = pageKey;
     const load = loaders[key];
-    if (!load) { PageComponent = Placeholder; return; }
-    load().then((m) => (PageComponent = m.default));
+    if (!load) { loaded = { key, component: Placeholder }; return; }
+    load().then((m) => { if (pageKey === key) loaded = { key, component: m.default }; });
   });
 
   /** 저장하지 않은 변경이 있으면 이동 전에 확인 */
@@ -88,17 +90,45 @@
     await alertDialog("완료", "엑셀 데이터 이관이 성공적으로 완료되었습니다.");
   }
 
+  const exportFileName = (year: number) => safeFileName(`${app.householdName}_${year}_가계부.xlsx`);
+
   async function exportExcel() {
-    const text = await promptDialog("엑셀 내보내기", "내보낼 연도를 입력하세요:", String(app.year));
+    const text = await promptWithAltDialog("엑셀 내보내기",
+      "내보낼 연도를 입력하세요.\n'모든 연도'를 누르면 연도별 파일로 한 번에 저장합니다.", String(app.year), "모든 연도");
     if (text == null) return;
+    if (text === ALT) return exportAllYears();
     const year = Number(text);
     if (!Number.isInteger(year) || year < 1900 || year > 2100) return alertDialog("오류", "연도를 올바르게 입력해 주세요.");
     try {
       const { buildExportWorkbook } = await import("$lib/excel");
       const bytes = await buildExportWorkbook(app.householdId!, year);
-      if (await saveXlsx(`${app.householdName}_${year}_가계부.xlsx`, bytes)) showNotice("엑셀 내보내기가 완료되었습니다.");
+      if (await saveXlsx(exportFileName(year), bytes)) showNotice("엑셀 내보내기가 완료되었습니다.");
     } catch (e) {
       alertDialog("오류", `엑셀 내보내기 중 오류 발생: ${e}`);
+    }
+  }
+
+  async function exportAllYears() {
+    const years = await getDataYears(app.householdId!);
+    if (!years.length) return alertDialog("안내", "내보낼 데이터가 없습니다. (가계부 내역이나 예산이 있는 연도가 없습니다)");
+    const ok = await confirmDialog("모든 연도 내보내기",
+      `내보낼 연도: ${years.map((y) => `${y}년`).join(", ")}\n연도별로 파일 ${years.length}개를 만듭니다. 저장할 폴더를 선택해 주세요.\n` +
+      "(폴더에 같은 이름의 파일이 있으면 덮어씁니다)", { okText: "폴더 선택" });
+    if (!ok) return;
+    const folder = await pickFolder();
+    if (folder == null) return;
+    const done: number[] = [];
+    try {
+      const { buildExportWorkbook } = await import("$lib/excel");
+      for (const year of years) {
+        showNotice(`엑셀 내보내는 중... (${year}년, ${done.length + 1}/${years.length})`, 60_000);
+        await saveXlsxToFolder(folder, exportFileName(year), await buildExportWorkbook(app.householdId!, year));
+        done.push(year);
+      }
+      showNotice(`${years.length}개 연도를 내보냈습니다.\n${folder}`, 5000);
+    } catch (e) {
+      showNotice("", 0);
+      alertDialog("오류", `${done.length ? `${done.join(", ")}년은 저장했지만 ` : ""}엑셀 내보내기 중 오류 발생: ${e}`);
     }
   }
 
@@ -111,10 +141,10 @@
   <aside>
     <div class="top-buttons">
       <div class="excel">
-        <button onclick={importExcel}>📂 엑셀 임포트</button>
-        <button onclick={exportExcel}>📤 엑셀 내보내기</button>
+        <button class="secondary" onclick={importExcel}>📂 엑셀 임포트</button>
+        <button class="secondary" onclick={exportExcel}>📤 엑셀 내보내기</button>
       </div>
-      <button onclick={back}>⬅️ 가계부 선택 이동</button>
+      <button class="weak" onclick={back}>⬅️ 가계부 선택 이동</button>
       <label class="year">
         <span>📅 연도</span>
         <input type="number" min="2000" max="2100" value={app.year} onchange={changeYear} />
@@ -132,28 +162,30 @@
     {#if version}<p class="version">v{version}</p>{/if}
   </aside>
   <section class="content">
-    {#key `${app.page}|${app.year}|${app.reloadToken}`}
-      <PageComponent month={monthOf(app.page)} />
-    {/key}
+    {#if loaded.key === pageKey}
+      {#key `${app.page}|${app.year}|${app.reloadToken}`}
+        <loaded.component month={monthOf(app.page)} />
+      {/key}
+    {/if}
   </section>
 </div>
 
 <style>
   .shell { display: flex; height: 100vh; }
-  aside { width: 240px; flex: none; display: flex; flex-direction: column; padding: 10px 0; border-right: 1px solid var(--border); background: var(--bg); }
-  .top-buttons { display: flex; flex-direction: column; gap: 8px; padding: 0 10px 10px; }
+  aside { width: 240px; flex: none; display: flex; flex-direction: column; padding: 16px 0 12px; background: var(--card); }
+  .top-buttons { display: flex; flex-direction: column; gap: 8px; padding: 0 14px 12px; }
   .excel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
   .excel button { padding: 9px 2px; font-size: 12px; white-space: nowrap; }
-  .top-buttons > button { padding: 9px; }
-  .year { display: flex; align-items: center; justify-content: space-between; font-weight: 700; padding: 4px 10px 0; }
-  .year input { width: 90px; }
-  nav { flex: 1; overflow: auto; display: flex; flex-direction: column; padding: 6px 12px 6px 0; }
-  .nav { text-align: left; background: transparent; border: none; color: var(--text); font-weight: 500; font-size: 13px;
-    padding: 9px 20px; border-radius: 0 22px 22px 0; white-space: pre; }
-  .nav:hover:not(.header) { background: var(--gray-soft); }
-  .nav.active { background: var(--blue-soft); color: var(--blue); font-weight: 700; }
-  .nav.header { color: var(--text); padding: 9px 20px; }
-  .nav.month { padding-left: 52px; }
-  .version { text-align: center; color: #9aa0a6; font-size: 12px; margin: 6px 0 0; }
-  .content { flex: 1; min-width: 0; padding: 20px 30px; overflow: auto; }
+  .top-buttons > button { padding: 10px; }
+  .year { display: flex; align-items: center; justify-content: space-between; font-weight: 600; color: var(--text-strong); padding: 6px 4px 0; }
+  .year input { width: 96px; }
+  nav { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-top: 1px solid var(--gray-soft); }
+  .nav { text-align: left; background: transparent; color: var(--text); font-weight: 500; font-size: 14px;
+    padding: 10px 14px; border-radius: 10px; white-space: pre; }
+  .nav:hover:not(.header):not(.active) { background: var(--gray-soft) !important; }
+  .nav.active, .nav.active:hover { background: var(--blue-soft); color: var(--blue-text); font-weight: 700; }
+  .nav.header { color: var(--muted); font-size: 12px; font-weight: 600; padding: 14px 14px 6px; cursor: default; }
+  .nav.month { padding-left: 30px; }
+  .version { text-align: center; color: var(--placeholder); font-size: 12px; margin: 6px 0 0; }
+  .content { flex: 1; min-width: 0; padding: 24px 28px; overflow: auto; }
 </style>

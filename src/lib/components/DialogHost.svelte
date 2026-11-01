@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dialog, notice } from "$lib/dialogs.svelte";
+  import { ALT, dialog, notice } from "$lib/dialogs.svelte";
 
   let input = $state<HTMLInputElement>();
 
@@ -38,6 +38,7 @@
       {/if}
       <div class="actions">
         {#if d.kind !== "alert"}<button class="secondary" onclick={cancel}>취소</button>{/if}
+        {#if d.altText}<button class="weak" onclick={() => d.resolve(ALT)}>{d.altText}</button>{/if}
         <button class={d.danger ? "danger" : ""} onclick={ok}>{d.okText}</button>
       </div>
     </div>
@@ -45,12 +46,14 @@
 {/if}
 
 <style>
-  .notice { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 110; white-space: pre-line;
-    background: #202124; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
-  .backdrop { position: fixed; inset: 0; background: rgba(32, 33, 36, 0.35); display: grid; place-items: center; z-index: 100; }
-  .box { background: #fff; border-radius: 12px; padding: 20px 22px; width: min(440px, 92vw); box-shadow: 0 8px 28px rgba(0,0,0,.2); }
-  h2 { margin: 0 0 8px; font-size: 16px; color: var(--text-strong); }
-  p { margin: 0 0 14px; white-space: pre-line; line-height: 1.6; font-size: 14px; }
-  input { width: 100%; margin-bottom: 14px; }
-  .actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .notice { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 110; white-space: pre-line;
+    background: rgba(25, 31, 40, 0.92); color: #fff; padding: 12px 20px; border-radius: 14px; font-size: 14px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); }
+  .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); display: grid; place-items: center; z-index: 100; }
+  .box { background: #fff; border-radius: 20px; padding: 24px; width: min(420px, 92vw); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16); }
+  h2 { margin: 0 0 8px; font-size: 18px; font-weight: 700; color: var(--text-strong); }
+  p { margin: 0 0 20px; white-space: pre-line; line-height: 1.6; font-size: 14px; color: var(--text); }
+  input { width: 100%; margin-bottom: 20px; font-size: 15px; padding: 12px 14px; }
+  .actions { display: flex; gap: 8px; }
+  .actions :global(button) { flex: 1; padding: 13px 16px; font-size: 15px; border-radius: 14px; }
 </style>

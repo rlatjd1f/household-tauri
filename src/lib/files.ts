@@ -22,6 +22,15 @@ export async function pickXlsx(): Promise<{ name: string; bytes: Uint8Array } | 
   });
 }
 
+/** 파일 이름에 쓸 수 없는 글자를 _로 바꿈 */
+export const safeFileName = (name: string) => name.replace(/[\\/:*?"<>|]/g, "_").trim();
+
+function download(name: string, bytes: Uint8Array) {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  Object.assign(document.createElement("a"), { href: url, download: name }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
 export async function saveXlsx(defaultName: string, bytes: Uint8Array): Promise<boolean> {
   if (isTauri()) {
     const { save } = await import("@tauri-apps/plugin-dialog");
@@ -31,8 +40,21 @@ export async function saveXlsx(defaultName: string, bytes: Uint8Array): Promise<
     await invoke("write_file_bytes", { path, data: Array.from(bytes) });
     return true;
   }
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-  Object.assign(document.createElement("a"), { href: url, download: defaultName }).click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  download(defaultName, bytes);
   return true;
+}
+
+/** 저장할 폴더를 고름 (브라우저 미리보기에서는 다운로드하므로 빈 문자열) */
+export async function pickFolder(): Promise<string | null> {
+  if (!isTauri()) return "";
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const path = await open({ title: "엑셀 파일을 저장할 폴더 선택", directory: true, multiple: false });
+  return path ? String(path) : null;
+}
+
+/** 고른 폴더에 파일 하나를 저장 (같은 이름의 파일은 덮어씀) */
+export async function saveXlsxToFolder(folder: string, name: string, bytes: Uint8Array) {
+  if (!isTauri()) return download(name, bytes);
+  const { join } = await import("@tauri-apps/api/path");
+  await invoke("write_file_bytes", { path: await join(folder, name), data: Array.from(bytes) });
 }

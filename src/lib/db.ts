@@ -293,6 +293,15 @@ export async function getYearlyMonthlyTrends(hid: number, year: number) {
 }
 
 // --- 엑셀 이관 ---
+/** 가계부 내역이나 예산이 있는 연도 (오름차순) */
+export async function getDataYears(hid: number): Promise<number[]> {
+  const rows = await select<{ y: string }>(`
+    SELECT substr(date, 1, 4) AS y FROM ledgers WHERE household_id = $1 AND date GLOB '[0-9][0-9][0-9][0-9]-*'
+    UNION SELECT CAST(year AS TEXT) FROM budgets WHERE household_id = $1 AND amount <> 0
+    ORDER BY 1`, [hid]);
+  return rows.map((r) => Number(r.y)).filter((y) => Number.isInteger(y));
+}
+
 export async function getExportData(hid: number, year: number) {
   const categories = await select<Category>(
     "SELECT id, type, parent_category, sub_category, color FROM categories WHERE household_id = $1 ORDER BY type, parent_category, id", [hid]);
