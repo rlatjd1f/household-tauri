@@ -46,8 +46,11 @@ npm run tauri build    # 설치 파일 만들기
 ```
 
 ## 📦 배포
-`v*` 태그를 푸시하면 GitHub Actions(`.github/workflows/release.yml`)가 Windows 설치 파일(setup.exe, msi)을 만들고,
+`v*` 태그를 푸시하면 GitHub Actions(`.github/workflows/release.yml`)가 Windows 설치 파일(setup.exe)과 자동 업데이트용 `latest.json`을 올리고,
 커밋 메시지를 분류해 한국어 릴리즈 노트와 함께 릴리즈를 만듭니다.
+
+태그를 만들기 전에 저장소의 버전도 같은 값으로 올립니다 (로컬 실행에서도 올바른 버전이 보이도록).
+`package.json`(+`package-lock.json`), `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`(+`Cargo.lock`)
 
 ### 🔄 자동 업데이트
 - 앱은 가계부 선택 화면에서 최신 릴리즈의 `latest.json`을 확인하고, 새 버전이 있으면 물어본 뒤 설치하고 다시 시작합니다.

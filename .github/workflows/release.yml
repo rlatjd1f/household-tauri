@@ -99,3 +99,13 @@ jobs:
           releaseBody: ${{ needs.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
+
+      # 서명 값은 latest.json에 들어 있으므로 .sig 파일은 릴리즈에서 지움 (setup.exe와 latest.json만 남김)
+      - name: Remove signature files from release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
+            | grep '\.sig$' \
+            | while IFS= read -r name; do gh release delete-asset "$GITHUB_REF_NAME" "$name" --repo "$GITHUB_REPOSITORY" -y; done
