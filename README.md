@@ -46,7 +46,7 @@ npm run tauri build    # 설치 파일 만들기
 ```
 
 ## 📦 배포
-`v*` 태그를 푸시하면 GitHub Actions(`.github/workflows/release.yml`)가 Windows·macOS 설치 파일을 만들고,
+`v*` 태그를 푸시하면 GitHub Actions(`.github/workflows/release.yml`)가 Windows 설치 파일(setup.exe, msi)을 만들고,
 커밋 메시지를 분류해 한국어 릴리즈 노트와 함께 릴리즈를 만듭니다.
 
 ## 📝 커밋 컨벤션

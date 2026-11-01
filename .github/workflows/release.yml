@@ -60,17 +60,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build for ${{ matrix.platform }}
+    name: Build for Windows
     needs: notes
-    runs-on: ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: windows-latest
-            args: ''
-          - platform: macos-latest
-            args: '--target universal-apple-darwin'
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -80,9 +72,6 @@ jobs:
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          # macOS는 Intel/Apple Silicon 공용(universal) 앱으로 빌드
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -101,13 +90,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 자동 업데이트 서명 키 (저장소 Settings > Secrets에 등록)
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: ${{ github.ref_name }}
           releaseBody: ${{ needs.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
