@@ -2,9 +2,10 @@
   // 월별 가계부의 지출/소득 표 (AG Grid). 저장 방식은 기존 앱과 같이 행별 저장(✅/❓) + 모두 저장.
   import { onDestroy, onMount } from "svelte";
   import {
-    AllCommunityModule, ModuleRegistry, createGrid, themeQuartz,
+    AllCommunityModule, ModuleRegistry, createGrid,
     type CellKeyDownEvent, type ColDef, type GridApi, type ICellRendererParams, type IRowNode,
   } from "ag-grid-community";
+  import { gridTheme } from "$lib/gridTheme";
   import { app } from "$lib/state.svelte";
   import {
     addLedgerEntry, updateLedgerEntry, deleteLedgerEntry,
@@ -57,6 +58,8 @@
   const selectCol = (field: keyof LedgerRow, headerName: string, values: (r: LedgerRow) => string[], minWidth: number): ColDef<LedgerRow> => ({
     field, headerName, flex: minWidth, minWidth, cellEditor: "agSelectCellEditor",
     cellEditorParams: (p: { data: LedgerRow }) => ({ values: ["", ...values(p.data)] }),
+    // 드롭다운은 한 번 클릭으로 바로 열고, 셀에 ▾ 표시
+    singleClickEdit: true, cellClass: "select-cell",
     tooltipField: field,
   });
 
@@ -71,14 +74,14 @@
 
   function columnDefs(): ColDef<LedgerRow>[] {
     const date: ColDef<LedgerRow> = {
-      field: "date", headerName: type === "지출" ? "소비날짜" : "소득날짜", flex: 100, minWidth: 100,
+      field: "date", headerName: type === "지출" ? "소비날짜" : "소득날짜", flex: 100, minWidth: 112,
       cellEditor: "agDateStringCellEditor", sort: "asc",
       // 저장하지 않은 새 행은 맨 아래, 나머지는 날짜 → 입력 순서
       comparator: (a: string, b: string, na: IRowNode<LedgerRow>, nb: IRowNode<LedgerRow>) =>
         Number(na.data!.isNew) - Number(nb.data!.isNew) || a.localeCompare(b) || na.data!.key - nb.data!.key,
     };
     const amount: ColDef<LedgerRow> = {
-      field: "amount", headerName: type === "지출" ? "지출금액" : "소득 금액", flex: 95, minWidth: 90, type: "rightAligned",
+      field: "amount", headerName: type === "지출" ? "지출금액" : "소득 금액", flex: 95, minWidth: 104, type: "rightAligned",
       // 숫자 전용 편집기는 '12,000원'이나 잘못된 입력을 그냥 버리므로, 글자로 받아 parseAmount로 해석
       cellDataType: false, cellEditor: "agTextCellEditor",
       valueFormatter: (p) => formatNumber(p.value),
@@ -90,7 +93,8 @@
       },
     };
     const status: ColDef<LedgerRow> = {
-      colId: "status", headerName: "저장", width: 52, minWidth: 52, editable: false, cellRenderer: statusRenderer, cellClass: "status-cell",
+      colId: "status", headerName: "저장", width: 60, minWidth: 60, editable: false, cellRenderer: statusRenderer,
+      cellClass: "status-cell", headerClass: "status-header",
     };
     if (type === "지출") {
       return [
@@ -217,10 +221,7 @@
 
   onMount(() => {
     api = createGrid<LedgerRow>(el, {
-      theme: themeQuartz.withParams({
-        fontFamily: "inherit", fontSize: 13, headerFontWeight: 600, accentColor: "#1a73e8",
-        headerBackgroundColor: "#f8f9fa", rowHeight: 34, headerHeight: 36, borderColor: "#dadce0",
-      }),
+      theme: gridTheme(38),
       rowData: entries.map(toRow),
       columnDefs: columnDefs(),
       defaultColDef: { editable: true, sortable: false, resizable: true, suppressMovable: true, suppressHeaderMenuButton: true },
@@ -233,7 +234,7 @@
       overlayNoRowsTemplate: '<span class="ag-overlay-no-rows-center">내역이 없습니다. 아래 "행 추가"로 입력하세요.</span>',
       getRowStyle: (p) => {
         const color = p.data ? findCat(catType, p.data.parent, p.data.sub)?.color : null;
-        return color ? { background: color, color: textColorFor(color) ?? "#202124" } : undefined;
+        return color ? { background: color, color: textColorFor(color) ?? "#191f28" } : undefined;
       },
       onCellValueChanged: (e) => {
         if (!e.data) return;
@@ -246,6 +247,12 @@
         onchange();
       },
       onCellKeyDown,
+      // 드롭다운 편집을 시작하면 목록까지 바로 펼침 (기본은 한 번 더 클릭해야 열림)
+      onCellEditingStarted: (e) => {
+        if (e.colDef.cellEditor !== "agSelectCellEditor") return;
+        setTimeout(() => el.querySelector(".ag-cell-inline-editing .ag-picker-field-wrapper")
+          ?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })), 0);
+      },
       onCellEditingStopped: (e) => {
         if (e.colDef.field === "amount" && lastAmountInvalid) {
           lastAmountInvalid = false;
@@ -263,6 +270,11 @@
 
 <style>
   .grid { flex: 1; min-height: 0; }
+  /* ▾ 자리는 편집 중이 아닐 때만 비움 (편집 중에 여백을 두면 드롭다운 옆에 빈 칸이 생김) */
+  .grid :global(.select-cell:not(.ag-cell-inline-editing)) { cursor: pointer; padding-right: 20px; }
+  .grid :global(.select-cell:not(.ag-cell-inline-editing)::after) { content: "▾"; position: absolute; right: 10px; top: 0; color: #b0b8c1; font-size: 12px; }
+  .grid :global(.status-header) { padding: 0 8px; }
+  .grid :global(.status-header .ag-header-cell-label) { justify-content: center; }
   .grid :global(.status-cell) { display: flex; align-items: center; justify-content: center; padding: 0; }
   .grid :global(button.status) { background: transparent; border: none; padding: 0 6px; font-size: 15px; line-height: 1; }
   .grid :global(button.status:hover) { background: transparent; transform: scale(1.15); }
