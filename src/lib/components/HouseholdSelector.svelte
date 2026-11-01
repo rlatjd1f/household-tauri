@@ -3,6 +3,7 @@
   import { getVersion } from "@tauri-apps/api/app";
   import { getHouseholds, addHousehold, renameHousehold, deleteHousehold, type Household } from "$lib/db";
   import { alertDialog, confirmDialog, promptDialog } from "$lib/dialogs.svelte";
+  import { checkForUpdate } from "$lib/updater";
 
   let { onselect }: { onselect: (h: Household) => void } = $props();
 
@@ -19,6 +20,7 @@
   onMount(async () => {
     await refresh();
     version = await getVersion().catch(() => "");
+    setTimeout(checkForUpdate, 1200);
   });
 
   async function create() {

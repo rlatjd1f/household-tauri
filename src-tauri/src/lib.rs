@@ -165,6 +165,8 @@ pub fn run() {
         .manage(Db(Mutex::new(None)))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             db_path_string, db_select, db_execute, db_batch, read_file_bytes, write_file_bytes
         ])

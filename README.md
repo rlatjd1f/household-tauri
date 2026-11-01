@@ -49,5 +49,11 @@ npm run tauri build    # 설치 파일 만들기
 `v*` 태그를 푸시하면 GitHub Actions(`.github/workflows/release.yml`)가 Windows 설치 파일(setup.exe, msi)을 만들고,
 커밋 메시지를 분류해 한국어 릴리즈 노트와 함께 릴리즈를 만듭니다.
 
+### 🔄 자동 업데이트
+- 앱은 가계부 선택 화면에서 최신 릴리즈의 `latest.json`을 확인하고, 새 버전이 있으면 물어본 뒤 설치하고 다시 시작합니다.
+- 업데이트 파일은 서명이 필요합니다. 서명 비밀 키는 `TAURI_SIGNING_PRIVATE_KEY` 저장소 Secret에 등록되어 있어야 하며,
+  공개 키는 `src-tauri/tauri.conf.json`의 `plugins.updater.pubkey`에 있습니다.
+- 비밀 키를 잃어버리면 이미 설치된 앱이 새 버전을 받을 수 없으므로 안전한 곳에 따로 보관하세요.
+
 ## 📝 커밋 컨벤션
 `feat` 기능 추가 · `fix` 버그 수정 · `style` 디자인 · `docs` 문서 · `refactor` 리팩토링 (내용은 한국어로 작성)
